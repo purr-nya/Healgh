@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-sdk tools:overrideLibrary="androidx.core.ktx,androidx.core,androidx.activity.compose,androidx.activity,androidx.lifecycle.runtime.compose,androidx.lifecycle.runtime.ktx,androidx.lifecycle.viewmodel.compose,androidx.lifecycle.viewmodel,androidx.compose.ui,androidx.compose.ui.graphics,androidx.compose.ui.tooling.preview,androidx.compose.material3,androidx.compose.material.icons.core,androidx.compose.material.icons.extended,androidx.compose.foundation,androidx.compose.runtime,androidx.compose.animation,androidx.compose.ui.text,androidx.lifecycle.common,androidx.lifecycle.livedata,androidx.savedstate,androidx.core.ktx" />
+
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MyApplication">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".HealthSyncService"
+            android:foregroundServiceType="health"
+            android:exported="false" />
+    </application>
+
+</manifest>
