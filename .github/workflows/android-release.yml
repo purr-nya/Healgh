@@ -24,7 +24,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.7' # 指定 Gradle 版本
+          gradle-version: '9.3.1' # 指定 Gradle 版本
 
       - name: Build Release APK
         run: gradle assembleRelease
