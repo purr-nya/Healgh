@@ -62,12 +62,26 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                var hasHeartRateSensor by remember {
+                    mutableStateOf(true)
+                }
+                
+                LaunchedEffect(Unit) {
+                    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+                    hasHeartRateSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_HEART_RATE) != null
+                }
+
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) { permissions ->
                     hasPermissions = permissions.values.all { it }
                     if (hasPermissions) {
-                        viewModel.startMonitoring(context)
+                        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+                        val hrSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_HEART_RATE)
+                        hasHeartRateSensor = hrSensor != null
+                        if (hasHeartRateSensor) {
+                            viewModel.startMonitoring(context)
+                        }
                     }
                 }
 
@@ -145,7 +159,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         if (selectedTab == 0) {
-                            DashboardScreen(viewModel, hasPermissions, {
+                            DashboardScreen(viewModel, hasPermissions, hasHeartRateSensor, {
                                 val permissionsToRequest = mutableListOf(
                                     Manifest.permission.BODY_SENSORS
                                 )
@@ -186,7 +200,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun DashboardScreen(viewModel: HealthViewModel, hasPermissions: Boolean, onRequestPermission: () -> Unit) {
+fun DashboardScreen(viewModel: HealthViewModel, hasPermissions: Boolean, hasHeartRateSensor: Boolean, onRequestPermission: () -> Unit) {
     val currentData by viewModel.currentData.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
     val isMonitoring by viewModel.isMonitoring.collectAsStateWithLifecycle()
@@ -227,6 +241,28 @@ fun DashboardScreen(viewModel: HealthViewModel, hasPermissions: Boolean, onReque
                     Button(onClick = onRequestPermission) {
                         Text("授予权限")
                     }
+                }
+            }
+        }
+
+        if (!hasHeartRateSensor) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "未检测到心率传感器",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "设备不支持心率检测，相关功能可能无法使用。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
             }
         }
