@@ -68,7 +68,9 @@ class HealthSyncService : Service(), SensorEventListener {
         wakeLock?.acquire(12 * 60 * 60 * 1000L) // 12 hours timeout to prevent infinite drain
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val allSensors = sensorManager?.getSensorList(Sensor.TYPE_ALL) ?: emptyList()
         heartRateSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+            ?: allSensors.firstOrNull { it.stringType == "android.sensor.HRN" || it.name.contains("HEART_RATE", ignoreCase = true) }
         stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
         heartRateSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
@@ -145,6 +147,11 @@ class HealthSyncService : Service(), SensorEventListener {
             }
             Sensor.TYPE_STEP_COUNTER -> {
                 HealthRepository.updateData(steps = event.values[0])
+            }
+            else -> {
+                if (event.sensor.stringType == "android.sensor.HRN" || event.sensor.name.contains("HEART_RATE", ignoreCase = true)) {
+                    HealthRepository.updateData(heartRate = event.values[0])
+                }
             }
         }
     }

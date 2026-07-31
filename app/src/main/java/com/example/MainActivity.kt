@@ -68,7 +68,10 @@ class MainActivity : ComponentActivity() {
                 
                 LaunchedEffect(Unit) {
                     val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
-                    hasHeartRateSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_HEART_RATE) != null
+                    val allSensors = sensorManager.getSensorList(android.hardware.Sensor.TYPE_ALL)
+                    val hrSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_HEART_RATE)
+                        ?: allSensors.firstOrNull { it.stringType == "android.sensor.HRN" || it.name.contains("HEART_RATE", ignoreCase = true) }
+                    hasHeartRateSensor = hrSensor != null
                 }
 
                 val permissionLauncher = rememberLauncherForActivityResult(
@@ -77,7 +80,9 @@ class MainActivity : ComponentActivity() {
                     hasPermissions = permissions.values.all { it }
                     if (hasPermissions) {
                         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+                        val allSensors = sensorManager.getSensorList(android.hardware.Sensor.TYPE_ALL)
                         val hrSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_HEART_RATE)
+                            ?: allSensors.firstOrNull { it.stringType == "android.sensor.HRN" || it.name.contains("HEART_RATE", ignoreCase = true) }
                         hasHeartRateSensor = hrSensor != null
                         if (hasHeartRateSensor) {
                             viewModel.startMonitoring(context)
