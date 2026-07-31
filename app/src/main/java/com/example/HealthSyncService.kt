@@ -45,6 +45,7 @@ class HealthSyncService : Service(), SensorEventListener {
         .connectTimeout(10, TimeUnit.SECONDS)
         .writeTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
+        .pingInterval(15, TimeUnit.SECONDS)
         .build()
         
     companion object {
@@ -123,18 +124,22 @@ class HealthSyncService : Service(), SensorEventListener {
     private fun startSyncLoop() {
         connectWebSocket()
         syncJob = serviceScope.launch {
-            HealthRepository.currentData.collect { data ->
-                val json = JSONObject().apply {
-                    put("heart_rate", data.heartRate)
-                    put("steps", data.steps)
-                    put("timestamp", System.currentTimeMillis())
+            while (isActive) {
+                val data = HealthRepository.currentData.value
+                if (data.heartRate > 0 || data.steps > 0) {
+                    val json = JSONObject().apply {
+                        put("heart_rate", data.heartRate)
+                        put("steps", data.steps)
+                        put("timestamp", System.currentTimeMillis())
+                    }
+                    val success = webSocket?.send(json.toString()) ?: false
+                    if (webSocket != null && !success) {
+                        // Try to reconnect if send fails
+                        webSocket?.cancel()
+                        connectWebSocket()
+                    }
                 }
-                val success = webSocket?.send(json.toString()) ?: false
-                if (webSocket != null && !success) {
-                    // Try to reconnect if send fails
-                    webSocket?.cancel()
-                    connectWebSocket()
-                }
+                delay(5000) // Send every 5 seconds to reduce CPU activity
             }
         }
     }
