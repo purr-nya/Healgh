@@ -74,8 +74,8 @@ class HealthSyncService : Service(), SensorEventListener {
             ?: allSensors.firstOrNull { it.stringType == "android.sensor.HRN" || it.name.contains("HEART_RATE", ignoreCase = true) }
         stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
-        heartRateSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        stepSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        heartRateSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
+        stepSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
         
         HealthRepository.setMonitoring(true)
         startSyncLoop()
@@ -139,7 +139,7 @@ class HealthSyncService : Service(), SensorEventListener {
                         connectWebSocket()
                     }
                 }
-                delay(5000) // Send every 5 seconds to reduce CPU activity
+                delay(1000) // Send every 1 second for real-time updates
             }
         }
     }
@@ -148,14 +148,20 @@ class HealthSyncService : Service(), SensorEventListener {
         event ?: return
         when (event.sensor.type) {
             Sensor.TYPE_HEART_RATE -> {
-                HealthRepository.updateData(heartRate = event.values[0])
+                val hr = event.values.firstOrNull { it > 10f && it < 250f } ?: event.values.getOrNull(0) ?: 0f
+                if (hr > 10f) {
+                    HealthRepository.updateData(heartRate = hr)
+                }
             }
             Sensor.TYPE_STEP_COUNTER -> {
                 HealthRepository.updateData(steps = event.values[0])
             }
             else -> {
                 if (event.sensor.stringType == "android.sensor.HRN" || event.sensor.name.contains("HEART_RATE", ignoreCase = true)) {
-                    HealthRepository.updateData(heartRate = event.values[0])
+                    val hr = event.values.firstOrNull { it > 10f && it < 250f } ?: event.values.getOrNull(0) ?: 0f
+                    if (hr > 10f) {
+                        HealthRepository.updateData(heartRate = hr)
+                    }
                 }
             }
         }
