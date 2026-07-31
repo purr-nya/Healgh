@@ -36,6 +36,7 @@ class HealthSyncService : Service(), SensorEventListener {
     private var heartRateSensor: Sensor? = null
     private var stepSensor: Sensor? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
     
     private var syncJob: Job? = null
     private var webSocket: WebSocket? = null
@@ -67,6 +68,12 @@ class HealthSyncService : Service(), SensorEventListener {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "HealthSync::BackgroundWakelock")
         wakeLock?.acquire(12 * 60 * 60 * 1000L) // 12 hours timeout to prevent infinite drain
+        
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        wifiLock = wifiManager.createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "HealthSync::WifiLock")
+        wifiLock?.acquire()
+        
+        scheduleWatchdog()
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val allSensors = sensorManager?.getSensorList(Sensor.TYPE_ALL) ?: emptyList()
@@ -82,6 +89,7 @@ class HealthSyncService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        scheduleWatchdog()
         return START_STICKY
     }
 
@@ -94,10 +102,37 @@ class HealthSyncService : Service(), SensorEventListener {
         wakeLock?.let {
             if (it.isHeld) it.release()
         }
+        wifiLock?.let {
+            if (it.isHeld) it.release()
+        }
+        cancelWatchdog()
         HealthRepository.setMonitoring(false)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun scheduleWatchdog() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = Intent(this, WatchdogReceiver::class.java)
+        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) android.app.PendingIntent.FLAG_IMMUTABLE else 0
+        val pendingIntent = android.app.PendingIntent.getBroadcast(this, 100, intent, pendingIntentFlags)
+        
+        // Schedule for 2 minutes from now
+        val triggerAtMillis = System.currentTimeMillis() + 2 * 60 * 1000L
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        } else {
+            alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        }
+    }
+    
+    private fun cancelWatchdog() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        val intent = Intent(this, WatchdogReceiver::class.java)
+        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) android.app.PendingIntent.FLAG_IMMUTABLE else 0
+        val pendingIntent = android.app.PendingIntent.getBroadcast(this, 100, intent, pendingIntentFlags)
+        alarmManager.cancel(pendingIntent)
+    }
 
     private fun connectWebSocket() {
         val prefs = getSharedPreferences("health_prefs", Context.MODE_PRIVATE)
@@ -196,6 +231,9 @@ class HealthSyncService : Service(), SensorEventListener {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .build()
     }
 }

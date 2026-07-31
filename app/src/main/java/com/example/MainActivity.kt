@@ -302,6 +302,15 @@ fun DashboardScreen(viewModel: HealthViewModel, hasPermissions: Boolean, hasHear
                         if (checked) {
                             if (hasPermissions) {
                                 viewModel.startMonitoring(context)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                                    if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                                        val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                        intent.data = android.net.Uri.parse("package:${context.packageName}")
+                                        context.startActivity(intent)
+                                        android.widget.Toast.makeText(context, "请允许忽略电池优化，以保持后台常驻不被杀", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
                             } else {
                                 onRequestPermission()
                             }
