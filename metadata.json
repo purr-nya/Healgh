@@ -1,5 +1,5 @@
 {
-  "name": "HealthSync",
+  "name": "Healgh",
   "description": "Monitors heart rate and other sensors on Android watches, syncing data to a Webhook.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

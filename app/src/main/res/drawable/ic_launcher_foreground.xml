@@ -3,9 +3,13 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- A large heart icon centered in the 108dp canvas, roughly fitting within the 66dp safe zone -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M78.6,37.2c-5.7,-5.7 -14.9,-5.7 -20.6,0l-4,4l-4,-4c-5.7,-5.7 -14.9,-5.7 -20.6,0c-6.1,6.1 -6.1,16 0,22.1l24.6,24.6l24.6,-24.6C84.7,53.2 84.7,43.3 78.6,37.2z" />
+    <group
+        android:scaleX="2.5"
+        android:scaleY="2.5"
+        android:translateX="24"
+        android:translateY="24">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"/>
+    </group>
 </vector>

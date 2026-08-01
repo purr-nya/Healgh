@@ -41,6 +41,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.theme.MyApplicationTheme
 
+import android.text.TextUtils
+import android.content.ComponentName
+
+fun isAccessibilityServiceEnabled(context: Context, accessibilityService: Class<*>): Boolean {
+    val expectedComponentName = ComponentName(context, accessibilityService)
+    val enabledServicesSetting = android.provider.Settings.Secure.getString(
+        context.contentResolver,
+        android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+    val colonSplitter = TextUtils.SimpleStringSplitter(':')
+    colonSplitter.setString(enabledServicesSetting)
+    while (colonSplitter.hasNext()) {
+        val componentNameString = colonSplitter.next()
+        val enabledService = ComponentName.unflattenFromString(componentNameString)
+        if (enabledService != null && enabledService == expectedComponentName)
+            return true
+    }
+    return false
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -310,6 +330,16 @@ fun DashboardScreen(viewModel: HealthViewModel, hasPermissions: Boolean, hasHear
                                         context.startActivity(intent)
                                         android.widget.Toast.makeText(context, "请允许忽略电池优化，以保持后台常驻不被杀", android.widget.Toast.LENGTH_LONG).show()
                                     }
+                                    if (!android.provider.Settings.canDrawOverlays(context)) {
+                                        val intent = Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+                                        context.startActivity(intent)
+                                        android.widget.Toast.makeText(context, "请允许显示在其他应用上层，以保持后台常驻", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                                if (!isAccessibilityServiceEnabled(context, KeepAliveAccessibilityService::class.java)) {
+                                    val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                    android.widget.Toast.makeText(context, "请开启无障碍服务[保持后台常驻]，以防止应用被杀", android.widget.Toast.LENGTH_LONG).show()
                                 }
                             } else {
                                 onRequestPermission()

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "HealthSync"
+rootProject.name = "Healgh"
 
 include(":app")

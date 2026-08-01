@@ -50,6 +50,7 @@ class HealthSyncService : Service(), SensorEventListener {
         .build()
         
     companion object {
+        const val ACTION_STOP_SERVICE = "com.example.ACTION_STOP_SERVICE"
         private const val CHANNEL_ID = "HealthSyncChannel"
         private const val NOTIFICATION_ID = 1
     }
@@ -89,6 +90,11 @@ class HealthSyncService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP_SERVICE) {
+            stopForeground(true)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         scheduleWatchdog()
         return START_STICKY
     }
@@ -173,6 +179,11 @@ class HealthSyncService : Service(), SensorEventListener {
                         webSocket?.cancel()
                         connectWebSocket()
                     }
+                    
+                    // Update Notification
+                    val notification = createNotification(data.heartRate, data.steps)
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notification)
                 }
                 delay(1000) // Send every 1 second for real-time updates
             }
@@ -216,7 +227,7 @@ class HealthSyncService : Service(), SensorEventListener {
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun createNotification(heartRate: Float = 0f, steps: Float = 0f): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_IMMUTABLE
@@ -224,12 +235,24 @@ class HealthSyncService : Service(), SensorEventListener {
             0
         }
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
+        
+        val stopIntent = Intent(this, HealthSyncService::class.java).apply {
+            action = ACTION_STOP_SERVICE
+        }
+        val stopPendingIntent = PendingIntent.getService(this, 1, stopIntent, pendingIntentFlags)
+
+        val text = if (heartRate > 0 || steps > 0) {
+            "心率: ${heartRate.toInt()} bpm | 步数: ${steps.toInt()}"
+        } else {
+            "正在后台监测心率并同步数据..."
+        }
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("健康同步运行中")
-            .setContentText("正在后台监测心率并同步数据...")
+            .setContentText(text)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "停止运行", stopPendingIntent)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
